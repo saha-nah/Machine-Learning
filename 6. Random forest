@@ -1,0 +1,102 @@
+from sklearn import datasets 
+iris = datasets.load_iris() 
+print(iris.target_names) 
+print(iris.feature_names) 
+print(iris.data[0:5]) 
+print(iris.target) 
+import pandas as pd 
+data=pd.DataFrame({ 
+    'sepal length':iris.data[:,0], 
+    'sepal width':iris.data[:,1], 
+    'petal length':iris.data[:,2], 
+    'petal width':iris.data[:,3], 
+    'species':iris.target 
+}) 
+data.head() 
+from sklearn.model_selection import train_test_split 
+ 
+ 
+X=data[['sepal length', 'sepal width', 'petal length', 'petal width']]  # Features 
+y=data['species']  # Labels 
+ 
+ 
+# Split dataset into training set and test set 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3) 
+ 
+ 
+from sklearn.ensemble import RandomForestClassifier 
+clf=RandomForestClassifier(n_estimators=100) 
+clf.fit(X_train,y_train) 
+ 
+ 
+y_pred=clf.predict(X_test) 
+from sklearn import metrics 
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred)) 
+import numpy as np 
+species_idx = clf.predict([[3, 5, 4, 2]])[0] 
+iris.target_names[species_idx] 
+import pandas as pd 
+feature_imp = pd.Series(clf.feature_importances_,index=iris.feature_names).sort_values(ascending=False) 
+feature_imp 
+import matplotlib.pyplot as plt 
+import seaborn as sns 
+%matplotlib inline 
+ 
+sns.barplot(x=feature_imp, y=feature_imp.index) 
+plt.xlabel('Feature Importance Score') 
+plt.ylabel('Features') 
+plt.title("Visualizing Important Features") 
+plt.legend() 
+plt.show() 
+
+
+import numpy as np 
+from sklearn.model_selection import train_test_split 
+X=data[['petal length', 'petal width','sepal length']]   
+y=data['species']                                        
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3) 
+from sklearn.ensemble import RandomForestClassifier 
+clf=RandomForestClassifier(n_estimators=100) 
+clf.fit(X_train,y_train) 
+y_pred=clf.predict(X_test) 
+from sklearn.metrics import precision_score,recall_score,accuracy_score 
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred)) 
+print("Precision Score : ",precision_score(y_test, y_pred,pos_label='positive',average='micro')) 
+print("Recall Score : ",recall_score(y_test, y_pred,pos_label='positive',average='micro'))  
+                                            
+Roc curve 
+from sklearn.metrics import roc_auc_score,roc_curve,auc 
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.metrics import RocCurveDisplay 
+from sklearn.multiclass import OneVsRestClassifier 
+RF=OneVsRestClassifier(RandomForestClassifier(max_features=0.2)) 
+RF.fit(X_train,y_train) 
+ 
+y_pred =RF.predict(X_test) 
+pred_prob=RF.predict_proba(X_test) 
+from  sklearn.preprocessing import label_binarize 
+classes=np.unique(y_test) 
+ 
+ 
+ 
+ 
+ 
+y_test_binarized=label_binarize(y_test,classes) 
+fpr={} 
+tpr={} 
+thresh={} 
+roc_auc=dict() 
+ 
+ 
+n_class = classes.shape 
+for i in range(n_class): 
+     fpr[i],tpr[i],thresh[i]=roc_curve(y_test_binarized[:,1],pred_prob[:,1]) 
+     roc_auc[i]=auc(fpr[i],tpr[i]) 
+     plt.plot(fpr[i],tpr[i],linestyle='--', 
+              label='%s vs Rest (AUC=%0.2f)'%(classes[i],roc_auc[i])) 
+plt.plot([0,1],[0,1],'b--') 
+plt.title("Multiclass ROC curve") 
+plt.xlabel("False Positive Rate") 
+plt.ylabel("True Positive Rate") 
+plt.legend(loc='lower right') 
+plt.show() 
