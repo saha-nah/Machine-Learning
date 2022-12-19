@@ -37,3 +37,98 @@ tree.plot_tree(decision.fit(x_train, y_train))
 plt.figure(figsize=(12,8)) 
 from sklearn import tree 
 tree.plot_tree(decision.fit(x_train, y_train)) 
+
+
+#Entropy 
+def entropy(p): 
+    return - p * np.log2(p) - (1 - p) * np.log2(1 - p) 
+# change default figure and font size 
+plt.rcParams['figure.figsize'] = 8, 6  
+plt.rcParams['font.size'] = 12 
+x = np.arange(0.0, 1.0, 0.01) 
+ent = [entropy(p) if p != 0 else None for p in x] 
+plt.plot(x, ent) 
+plt.axhline(y = 1.0, linewidth = 1, color = 'k', linestyle = '--') 
+plt.ylim([ 0, 1.1 ]) 
+plt.xlabel('p(i=1)') 
+plt.ylabel('Entropy') 
+plt.show() 
+
+
+#Gini Index 
+def gini(p): 
+    return p * (1 - p) + (1 - p) * ( 1 - (1 - p) ) 
+gi = gini(x) 
+# plot 
+for i, lab in zip([ent, gi], ['Entropy', 'Gini Index']): 
+    plt.plot(x, i, label = lab) 
+plt.legend(loc = 'upper center', bbox_to_anchor = (0.5, 1.15), 
+           ncol = 3, fancybox = True, shadow = False) 
+plt.axhline(y = 0.5, linewidth = 1, color = 'k', linestyle = '--') 
+plt.axhline(y = 1.0, linewidth = 1, color = 'k', linestyle = '--') 
+plt.ylim([ 0, 1.1 ]) 
+plt.xlabel('p(i=1)') 
+plt.ylabel('Impurity') 
+plt.tight_layout() 
+plt.show() 
+
+
+# Information Gain 
+def information_gain(df, split_attribute, target_attribute,battr): 
+    print(" Information Gain Calculation of",split_attribute,)  
+    df_split = df.groupby(split_attribute)  
+    glist=[] 
+    for gname,group in df_split: 
+        print('Grouped Attribute Values ',group) 
+         glist.append(gname)  
+   glist.reverse() 
+    nobs = len(df.index) * 1.0    
+    df_agg1=df_split.agg({target_attribute:lambda x:entropy (x, glist.pop())}) 
+    df_agg2=df_split.agg({target_attribute :lambda x:len(x)/nobs}) 
+    df_agg1.columns=['Entropy'] 
+    df_agg2.columns=['Proportion'] 
+   # Calculate Information Gain: 
+    new_entropy = sum( df_agg1['Entropy'] * df_agg2['Proportion']) 
+    if battr !='S': 
+        old_entropy =entropy(df[target_attribute],'S-'+df.iloc[0][df.columns.get_loc(battr)]) 
+    else: 
+        old_entropy = entropy(df[target_attribute],battr) 
+    return old_entropy - new_entropy 
+#ID3 Information Gain 
+def id3(df, target_attribute, attribute_names, default_class=None,default_attr='S'): 
+     
+    from collections import Counter 
+    cnt = Counter(x for x in df[target_attribute])# class of YES /NO 
+    ## First check: Is this split of the dataset homogeneous? 
+    if len(cnt) == 1: 
+        return next(iter(cnt))  # next input data set, or raises StopIteration when EOF is hit. 
+    ## Second check: Is this split of the dataset empty? if yes, return a default value 
+    elif df.empty or (not attribute_names): 
+        return default_class  # Return None for Empty Data Set 
+   ## Otherwise: This dataset is ready to be devied up! 
+    else: 
+        # Get Default Value for next recursive call of this function: 
+        default_class = max(cnt.keys()) #No of YES and NO Class 
+        # Compute the Information Gain of the attributes: 
+        gainz=[] 
+        for attr in attribute_names: 
+            ig= information_gain(df, attr, target_attribute,default_attr) 
+            gainz.append(ig) 
+            print('\nInformation gain of','“',attr,'”','is ➡', ig) 
+            print("=========================================================") 
+        index_of_max = gainz.index(max(gainz))               # Index of Best Attribute 
+        best_attr = attribute_names[index_of_max]            # Choose Best Attribute to split on 
+        print("\nList of Gain for arrtibutes:",attribute_names,"\nare:", gainz,"respectively.") 
+        print("\nAttribute with the maximum gain is ➡", best_attr) 
+        print("\nHence, the Root node will be ➡", best_attr) 
+        print("=========================================================") 
+      # Create an empty tree, to be populated in a moment 
+        tree = {best_attr:{}} # Initiate the tree with best attribute as a node  
+        remaining_attribute_names =[i for i in attribute_names if i != best_attr] 
+      # Split dataset 
+On each split, recursively call this algorithm.Populate the empty tree with subtrees, which 
+are the result of the recursive call 
+        for attr_val, data_subset in df.groupby(best_attr): 
+            subtree = id3(data_subset,target_attribute, remaining_attribute_names,default_class,best_attr) 
+            tree[best_attr][attr_val] = subtree 
+        return tree 
